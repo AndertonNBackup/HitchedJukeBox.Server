@@ -1,15 +1,15 @@
 {
-  "name": "HitchedJukeBox.Server",
+  "name": "hitchedjukebox.server",
   "version": "1.0.0",
-  "description": "The controller service for the HitchedJukeBox",
+  "description": "The server microservice for the hitched jukebox application",
   "main": "index.js",
-  "author": "N.Anderton",
-  "license": "MIT",
-  "dependencies": {
-    "express": "^4.15.3",
-    "nodejs": "^0.0.0",
-    "socket.io": "^2.0.3",
-    "socket.io-client": "^2.0.3",
-    "socket.io-redis": "^5.1.0"
-  }
+  "scripts": {
+    "build": "docker build -t hitchedjukebox.server:dev .",
+    "logs": "docker logs server.dev",
+    "logs:follow": "docker logs server.dev --follow",
+    "start": "sh development.sh",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "N. D. Anderton",
+  "license": "ISC"
 }
