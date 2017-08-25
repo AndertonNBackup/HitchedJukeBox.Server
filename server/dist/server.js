@@ -3,9 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
 const http = require("http");
 const socketIo = require("socket.io");
-const io = require("socket.io-client");
 const redis = require("socket.io-redis");
-const user_1 = require("./services/user");
+const now_playing_1 = require("./services/now-playing");
+const rabbit_mq_1 = require("./services/rabbit-mq");
 class Server {
     constructor() {
         this.createApp();
@@ -13,7 +13,6 @@ class Server {
         this.createServer();
         this.sockets();
         this.services();
-        this.listen();
     }
     static bootstrap() {
         return new Server().bootstrap();
@@ -30,7 +29,6 @@ class Server {
     config() {
         this.port = parseInt(process.env.PORT) || Server.PORT;
         this.redisHost = process.env.REDIS_HOST || Server.REDIS_HOST;
-        console.log("Redis Host : " + this.redisHost);
     }
     sockets() {
         try {
@@ -41,61 +39,14 @@ class Server {
         catch (e) {
             this.io = socketIo(this.server);
         }
-        this.socket = io.connect('localhost:8081', {
-            upgrade: false,
-            transports: ['websocket']
-        });
-        this.socket.on("Test", (val) => {
-            console.log(val);
-        });
     }
     services() {
-        //this.spotify = SpotifyService.bootstrap();
-        //this.nowPlaying = NowPlayingService.bootstrap();
+        this.rabbit = rabbit_mq_1.RabbitMQService.bootstrap();
+        this.nowPlaying = now_playing_1.NowPlayingService.bootstrap(this.rabbit, this.io);
     }
     listen() {
         this.server.listen(this.port, () => {
             console.log('Running server on port %s', this.port);
-        });
-        this.io.of('/').adapter.on('connect', (socket) => {
-            let connectedUserMap = user_1.UserFunctions.getMap();
-            connectedUserMap.set(socket.id, { status: 'online', name: 'none' });
-            console.log('Connected client on port %s.', this.port);
-            console.log('Connected client id : %s.', socket.id);
-            socket.on('recieveUserName', (data) => {
-                let user = connectedUserMap.get(socket.id);
-                user.name = data.name;
-                console.log('Connected client name : %s.', user.name);
-                this.spotify.register_hooks(this.io, socket, Server.APP_PREFIX);
-                this.nowPlaying.register_hooks(this.io, socket, Server.APP_PREFIX);
-            });
-            socket.on('disconnect', () => {
-                console.log('Client disconnected');
-                let user = connectedUserMap.get(socket.id);
-                user.status = 'offline';
-            });
-        });
-        this.io.on('Test', (val) => {
-            console.log(val);
-        });
-        this.io.emit("Test", "Test");
-        this.io.on('connect', (socket) => {
-            let connectedUserMap = user_1.UserFunctions.getMap();
-            connectedUserMap.set(socket.id, { status: 'online', name: 'none' });
-            console.log('Connected client on port %s.', this.port);
-            console.log('Connected client id : %s.', socket.id);
-            socket.on('recieveUserName', (data) => {
-                let user = connectedUserMap.get(socket.id);
-                user.name = data.name;
-                console.log('Connected client name : %s.', user.name);
-                this.spotify.register_hooks(this.io, socket, Server.APP_PREFIX);
-                this.nowPlaying.register_hooks(this.io, socket, Server.APP_PREFIX);
-            });
-            socket.on('disconnect', () => {
-                console.log('Client disconnected');
-                let user = connectedUserMap.get(socket.id);
-                user.status = 'offline';
-            });
         });
     }
 }

@@ -11,8 +11,17 @@ class NowPlayingRequest {
     GetData() {
         return this.Data;
     }
+    AddCredentials(Credentials) {
+        this.Credentials = Credentials;
+        return true;
+    }
+    GetCredentials() {
+        return this.Credentials;
+    }
     static FromObject(request) {
-        return new NowPlayingRequest(request.Type, request.Data);
+        let npr = new NowPlayingRequest(request.Type, request.Data);
+        npr.AddCredentials(request.Credentials);
+        return npr;
     }
     static fetchCommandHook(appPrefix, servicePrefix) {
         let commandHook = appPrefix + "." + servicePrefix + "." + NowPlayingRequest.COMMAND_HOOK;

@@ -9,6 +9,7 @@
     "start:watch": "npm run build && nodemon ./dist/server"
   },
   "dependencies": {
+    "amqplib": "^0.5.1",
     "cookie-parser": "^1.4.3",
     "express": "~4.10.0",
     "morgan": "^1.8.2",

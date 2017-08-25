@@ -6,11 +6,20 @@ import * as redis from 'socket.io-redis';
 import * as logger from 'morgan';
 import * as cookieParser from 'cookie-parser';
 import * as bodyParser from 'body-parser';
+import * as amqp from 'amqplib/callback_api'
+
+import { Observable } from 'rxjs/Observable';
+import { ISubscription } from "rxjs/Subscription";
 
 import { UserFunctions } from './services/user';
 
 import { SpotifyService } from './services/spotify';
+import { SpotifyTrack } from './models/shared/core/spotify-track';
 import { NowPlayingService } from './services/now-playing';
+import { RabbitMQService } from './services/rabbit-mq';
+
+import { NowPlayingRequest } from './models/shared/now-playing/now-playing-request';
+import { NowPlayingTrackRequest } from './models/shared/now-playing/now-playing-track-request';
 
 class Server {
     public static readonly REDIS_HOST = 'localhost';
@@ -21,9 +30,10 @@ class Server {
     private io: SocketIO.Server;
     private spotify: SpotifyService;
     private nowPlaying: NowPlayingService;
+    private rabbit: RabbitMQService;
     private redisHost: string;
     private port: number;
-    private socket: any;
+    private connection: ISubscription;
 
     public static bootstrap(): Server {
         return new Server().bootstrap();
@@ -35,7 +45,6 @@ class Server {
         this.createServer();
         this.sockets();
         this.services();
-        this.listen();
     }
 
     private bootstrap(): Server {
@@ -54,7 +63,6 @@ class Server {
     private config(): void {
         this.port = parseInt(process.env.PORT) || Server.PORT;
         this.redisHost = process.env.REDIS_HOST || Server.REDIS_HOST;
-        console.log("Redis Host : " + this.redisHost);
     }
 
     private sockets(): void {
@@ -62,25 +70,17 @@ class Server {
             this.io = socketIo(this.server);
             this.io.adapter(redis({ host: this.redisHost, port: 6379 }));
 
-            this.io.of('/').adapter.on('error', function(error){ console.log(error) });
+            this.io.of('/').adapter.on('error', function (error) { console.log(error) });
         }
-        catch(e)
-        {
+        catch (e) {
             this.io = socketIo(this.server);
         }
 
-        this.socket = io.connect('localhost:8081', {
-            upgrade: false,
-            transports: ['websocket']
-        });
-        this.socket.on("Test", (val: string) => {
-            console.log(val);
-        });
     }
 
     private services(): void {
-        //this.spotify = SpotifyService.bootstrap();
-        //this.nowPlaying = NowPlayingService.bootstrap();
+        this.rabbit = RabbitMQService.bootstrap();
+        this.nowPlaying = NowPlayingService.bootstrap(this.rabbit, this.io);
     }
 
     private listen(): void {
@@ -88,53 +88,6 @@ class Server {
             console.log('Running server on port %s', this.port);
         });
 
-        this.io.of('/').adapter.on('connect', (socket: SocketIO.Socket) => {
-            let connectedUserMap: Map<string, any> = UserFunctions.getMap();
-            connectedUserMap.set(socket.id, { status:'online', name: 'none' });
-
-            console.log('Connected client on port %s.', this.port);
-            console.log('Connected client id : %s.', socket.id);
-
-            socket.on('recieveUserName', (data) => {
-                let user = connectedUserMap.get(socket.id);
-                user.name = data.name;
-                console.log('Connected client name : %s.', user.name);
-                this.spotify.register_hooks(this.io, socket, Server.APP_PREFIX);
-                this.nowPlaying.register_hooks(this.io, socket, Server.APP_PREFIX);
-            });
-            socket.on('disconnect', () => {
-                console.log('Client disconnected');
-                let user = connectedUserMap.get(socket.id);
-                user.status = 'offline';
-            });
-        });
-
-        this.io.on('Test', (val: string) => {
-            console.log(val);
-        });
-
-        this.io.emit("Test","Test");
-
-        this.io.on('connect', (socket: SocketIO.Socket) => {
-            let connectedUserMap: Map<string, any> = UserFunctions.getMap();
-            connectedUserMap.set(socket.id, { status:'online', name: 'none' });
-
-            console.log('Connected client on port %s.', this.port);
-            console.log('Connected client id : %s.', socket.id);
-
-            socket.on('recieveUserName', (data) => {
-                let user = connectedUserMap.get(socket.id);
-                user.name = data.name;
-                console.log('Connected client name : %s.', user.name);
-                this.spotify.register_hooks(this.io, socket, Server.APP_PREFIX);
-                this.nowPlaying.register_hooks(this.io, socket, Server.APP_PREFIX);
-            });
-            socket.on('disconnect', () => {
-                console.log('Client disconnected');
-                let user = connectedUserMap.get(socket.id);
-                user.status = 'offline';
-            });
-        });
     }
 }
 
