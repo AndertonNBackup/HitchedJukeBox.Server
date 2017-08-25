@@ -54,15 +54,15 @@ export class NowPlayingService {
             nowPlayingRequest = NowPlayingRequest.FromObject(JSON.parse(nowPlayingRequest));
 
             switch (nowPlayingRequest.GetType()) {
-                // case NowPlayingRequest.NP_REQUEST_ALBUM:
-                //     this.process_album_request(nowPlayingRequest.GetData() as NowPlayingAlbumRequest);
-                //     break;
+                case NowPlayingRequest.NP_REQUEST_ALBUM:
+                    // this.process_album_request(nowPlayingRequest.GetData() as NowPlayingAlbumRequest, nowPlayingRequest.GetCredentials());
+                    break;
                 case NowPlayingRequest.NP_REQUEST_TRACK:
                     this.process_track_request(nowPlayingRequest.GetData() as NowPlayingTrackRequest, nowPlayingRequest.GetCredentials());
                     break;
-                // case NowPlayingRequest.NP_REQUEST_COMMAND:
-                //     this.process_command_request(nowPlayingRequest.GetData() as NowPlayingCommandRequest);
-                //     break;
+                case NowPlayingRequest.NP_REQUEST_COMMAND:
+                    this.process_command_request(nowPlayingRequest.GetData() as NowPlayingCommandRequest, nowPlayingRequest.GetCredentials());
+                    break;
                 default:
             }
         });
@@ -88,87 +88,73 @@ export class NowPlayingService {
         );
     }
 
-    // private process_command_request(commandRequest: NowPlayingCommandRequest): void {
-    //     commandRequest = NowPlayingCommandRequest.FromObject(commandRequest);
-    //     console.log(commandRequest);
-    //     switch (commandRequest.GetType()) {
-    //         case NowPlayingCommandRequest.NPC_REFRESH:
-    //             this.process_reresh_request(socket);
-    //             break;
-    //         case NowPlayingCommandRequest.NPC_CLEAR:
-    //             this.process_clear_request(socket);
-    //             break;
-    //         case NowPlayingCommandRequest.NPC_VOTE:
-    //             this.process_upvote_request(socket, commandRequest);
-    //             break;
-    //         case NowPlayingCommandRequest.NPC_DOWNVOTE:
-    //             this.process_downvote_request(socket, commandRequest);
-    //             break;
-    //         default:
-    //     }
-    // }
+    private process_command_request(commandRequest: NowPlayingCommandRequest, Credentials: { status: string, name: string }): void {
+        commandRequest = NowPlayingCommandRequest.FromObject(commandRequest);
+        console.log(commandRequest);
+        switch (commandRequest.GetType()) {
+            case NowPlayingCommandRequest.NPC_REFRESH:
+                this.process_reresh_request(Credentials);
+                break;
+            case NowPlayingCommandRequest.NPC_CLEAR:
+                this.process_clear_request(Credentials);
+                break;
+            case NowPlayingCommandRequest.NPC_VOTE:
+                this.process_upvote_request(Credentials, commandRequest);
+                break;
+            case NowPlayingCommandRequest.NPC_DOWNVOTE:
+                this.process_downvote_request(Credentials, commandRequest);
+                break;
+            default:
+        }
+    }
 
-    // private process_reresh_request(socket: SocketIO.Socket): void {
-    //     let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(this.MainQueue);
-    //     socket.emit(
-    //         NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
-    //         nowPlayingResponse
-    //     );
-    // }
+    private process_reresh_request(Credentials: { status: string, name: string }): void {
+        let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(this.MainQueue);
+        this.io.emit(
+            NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
+            nowPlayingResponse
+        );
+    }
 
-    // private process_upvote_request(socket: SocketIO.Socket, commandRequest: NowPlayingCommandRequest): void {
-    //     let nowPlayingItem: NowPlayingItem = this.MainQueue.find(item => item.getId() === commandRequest.GetIndex());
-    //     let user = UserFunctions.getUser(socket.id);
-    //     nowPlayingItem.AddVote(user.name);
-    //     this.MainQueue = this.MainQueue.sort((itemA, itemB) => {
-    //         return itemA.GetVoteCount() > itemB.GetVoteCount() ? -1 : itemA.GetVoteCount() == itemB.GetVoteCount() ? 0 : 1;
-    //     });
-    //     let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(this.MainQueue);
-    //     socket.emit(
-    //         NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
-    //         nowPlayingResponse
-    //     );
-    //     socket.broadcast.emit(
-    //         NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
-    //         nowPlayingResponse
-    //     );
-    // }
+    private process_upvote_request(Credentials: { status: string, name: string }, commandRequest: NowPlayingCommandRequest): void {
+        let nowPlayingItem: NowPlayingItem = this.MainQueue.find(item => item.getId() === commandRequest.GetIndex());
+        nowPlayingItem.AddVote(Credentials.name);
+        this.MainQueue = this.MainQueue.sort((itemA, itemB) => {
+            return itemA.GetVoteCount() > itemB.GetVoteCount() ? -1 : itemA.GetVoteCount() == itemB.GetVoteCount() ? 0 : 1;
+        });
+        let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(this.MainQueue);
+        this.io.emit(
+            NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
+            nowPlayingResponse
+        );
+    }
 
-    // private process_downvote_request(socket: SocketIO.Socket, commandRequest: NowPlayingCommandRequest): void {
-    //     let nowPlayingItem: NowPlayingItem = this.MainQueue.find(item => item.getId() === commandRequest.GetIndex());
-    //     let user = UserFunctions.getUser(socket.id);
-    //     nowPlayingItem.RemoveVote(user.name);
-    //     if (nowPlayingItem.GetVoteCount() <= 0) {
-    //         this.MainQueue = this.MainQueue.filter(item => item.getId() !== nowPlayingItem.getId());
-    //     }
-    //     this.MainQueue = this.MainQueue.sort((itemA, itemB) => {
-    //         return itemA.GetVoteCount() > itemB.GetVoteCount() ? -1 : itemA.GetVoteCount() == itemB.GetVoteCount() ? 0 : 1
-    //     });
-    //     let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(this.MainQueue);
-    //     socket.emit(
-    //         NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
-    //         nowPlayingResponse
-    //     );
-    //     socket.broadcast.emit(
-    //         NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
-    //         nowPlayingResponse
-    //     );
-    // }
+    private process_downvote_request(Credentials: { status: string, name: string }, commandRequest: NowPlayingCommandRequest): void {
+        let nowPlayingItem: NowPlayingItem = this.MainQueue.find(item => item.getId() === commandRequest.GetIndex());
+        nowPlayingItem.RemoveVote(Credentials.name);
+        if (nowPlayingItem.GetVoteCount() <= 0) {
+            this.MainQueue = this.MainQueue.filter(item => item.getId() !== nowPlayingItem.getId());
+        }
+        this.MainQueue = this.MainQueue.sort((itemA, itemB) => {
+            return itemA.GetVoteCount() > itemB.GetVoteCount() ? -1 : itemA.GetVoteCount() == itemB.GetVoteCount() ? 0 : 1
+        });
+        let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(this.MainQueue);
+        this.io.emit(
+            NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
+            nowPlayingResponse
+        );
+    }
 
-    // private process_clear_request(socket: SocketIO.Socket): void {
-    //     this.MainQueue = new Array<any>();
-    //     let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(this.MainQueue);
-    //     socket.emit(
-    //         NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
-    //         nowPlayingResponse
-    //     );
-    //     socket.broadcast.emit(
-    //         NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
-    //         nowPlayingResponse
-    //     );
-    // }
+    private process_clear_request(Credentials: { status: string, name: string }): void {
+        this.MainQueue = new Array<any>();
+        let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(this.MainQueue);
+        this.io.emit(
+            NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
+            nowPlayingResponse
+        );
+    }
 
-    //private process_album_request(socket: SocketIO.Socket, albumRequest: NowPlayingAlbumRequest): void {
+    private process_album_request(socket: SocketIO.Socket, albumRequest: NowPlayingAlbumRequest): void {
         // albumRequest = NowPlayingAlbumRequest.FromObject(albumRequest);
         // this.MainQueue.push({ 'id': "NewAlbumItem" });
         // let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(this.MainQueue);
@@ -178,5 +164,5 @@ export class NowPlayingService {
         //     NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
         //     new NowPlayingResponse(this.MainQueue)
         // );
-    // }
+    }
 }
