@@ -5,6 +5,7 @@ import { ISubscription } from "rxjs/Subscription";
 
 import { UserFunctions } from './user';
 import { RabbitMQService } from './rabbit-mq';
+import { QueueManagerService } from './queue-manager';
 
 import { SpotifyTrack } from '../models/shared/core/spotify-track';
 
@@ -23,18 +24,18 @@ export class NowPlayingService {
 
     private io: SocketIO.Server;
     private rabbit: RabbitMQService;
+    private queueManager: QueueManagerService;
     private connection: ISubscription;
 
-    private MainQueue: Array<NowPlayingItem>;
-
-    public static bootstrap(rabbit: RabbitMQService, io: SocketIO.Server): NowPlayingService {
-        return new NowPlayingService(rabbit, io).bootstrap();
+    public static bootstrap(rabbit: RabbitMQService, io: SocketIO.Server, queueManager: QueueManagerService): NowPlayingService {
+        return new NowPlayingService(rabbit, io, queueManager).bootstrap();
     }
 
-    constructor(rabbit: RabbitMQService, io: SocketIO.Server) {
+    constructor(rabbit: RabbitMQService, io: SocketIO.Server, queueManager: QueueManagerService) {
         this.config();
         this.rabbit = rabbit;
         this.io = io;
+        this.queueManager = queueManager
     }
 
     private bootstrap(): NowPlayingService {
@@ -44,8 +45,6 @@ export class NowPlayingService {
 
     private config(): void {
         console.log('Now Playing Service Initiated!');
-
-        this.MainQueue = new Array<any>();
     }
 
     private listen() {
@@ -69,10 +68,10 @@ export class NowPlayingService {
     }
 
     private process_track_request(trackRequest: NowPlayingTrackRequest, Credentials: { status: string, name: string }): void {
-        trackRequest = NowPlayingTrackRequest.FromObject(trackRequest);
+        
         let spotifyTrack: SpotifyTrack = SpotifyTrack.fromJSON(trackRequest);
 
-        this.MainQueue.push(new NowPlayingItem(
+        this.queueManager.AddTrack(new NowPlayingItem(
             NowPlayingItem.NP_TRACK,
             spotifyTrack.GetID(),
             spotifyTrack.GetName(),
@@ -80,7 +79,10 @@ export class NowPlayingService {
             spotifyTrack.GetImage(),
             Credentials.name
         ));
-        let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(this.MainQueue);
+
+        let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(
+            this.queueManager.FetchQueue()
+        );
 
         this.io.emit(
             NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
@@ -89,8 +91,9 @@ export class NowPlayingService {
     }
 
     private process_command_request(commandRequest: NowPlayingCommandRequest, Credentials: { status: string, name: string }): void {
+
         commandRequest = NowPlayingCommandRequest.FromObject(commandRequest);
-        console.log(commandRequest);
+
         switch (commandRequest.GetType()) {
             case NowPlayingCommandRequest.NPC_REFRESH:
                 this.process_reresh_request(Credentials);
@@ -109,7 +112,11 @@ export class NowPlayingService {
     }
 
     private process_reresh_request(Credentials: { status: string, name: string }): void {
-        let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(this.MainQueue);
+
+        let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(
+            this.queueManager.FetchQueue()
+        );
+
         this.io.emit(
             NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
             nowPlayingResponse
@@ -117,12 +124,13 @@ export class NowPlayingService {
     }
 
     private process_upvote_request(Credentials: { status: string, name: string }, commandRequest: NowPlayingCommandRequest): void {
-        let nowPlayingItem: NowPlayingItem = this.MainQueue.find(item => item.getId() === commandRequest.GetIndex());
-        nowPlayingItem.AddVote(Credentials.name);
-        this.MainQueue = this.MainQueue.sort((itemA, itemB) => {
-            return itemA.GetVoteCount() > itemB.GetVoteCount() ? -1 : itemA.GetVoteCount() == itemB.GetVoteCount() ? 0 : 1;
-        });
-        let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(this.MainQueue);
+        
+        this.queueManager.AddVoteToTrack(commandRequest.GetIndex(), Credentials.name);
+
+        let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(
+            this.queueManager.FetchQueue()
+        );
+
         this.io.emit(
             NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
             nowPlayingResponse
@@ -130,15 +138,13 @@ export class NowPlayingService {
     }
 
     private process_downvote_request(Credentials: { status: string, name: string }, commandRequest: NowPlayingCommandRequest): void {
-        let nowPlayingItem: NowPlayingItem = this.MainQueue.find(item => item.getId() === commandRequest.GetIndex());
-        nowPlayingItem.RemoveVote(Credentials.name);
-        if (nowPlayingItem.GetVoteCount() <= 0) {
-            this.MainQueue = this.MainQueue.filter(item => item.getId() !== nowPlayingItem.getId());
-        }
-        this.MainQueue = this.MainQueue.sort((itemA, itemB) => {
-            return itemA.GetVoteCount() > itemB.GetVoteCount() ? -1 : itemA.GetVoteCount() == itemB.GetVoteCount() ? 0 : 1
-        });
-        let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(this.MainQueue);
+        
+        this.queueManager.RemoveVoteFromTrack(commandRequest.GetIndex(), Credentials.name);
+        
+        let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(
+            this.queueManager.FetchQueue()
+        );
+
         this.io.emit(
             NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
             nowPlayingResponse
@@ -146,8 +152,11 @@ export class NowPlayingService {
     }
 
     private process_clear_request(Credentials: { status: string, name: string }): void {
-        this.MainQueue = new Array<any>();
-        let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(this.MainQueue);
+
+        let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(
+            this.queueManager.ClearQueue()
+        );
+
         this.io.emit(
             NowPlayingResponse.fetchNowPlayingResponseHook(this.appPrefix, NowPlayingService.SERVICE_PREFIX),
             nowPlayingResponse

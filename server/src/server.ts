@@ -8,18 +8,9 @@ import * as cookieParser from 'cookie-parser';
 import * as bodyParser from 'body-parser';
 import * as amqp from 'amqplib/callback_api'
 
-import { Observable } from 'rxjs/Observable';
-import { ISubscription } from "rxjs/Subscription";
-
-import { UserFunctions } from './services/user';
-
-import { SpotifyService } from './services/spotify';
-import { SpotifyTrack } from './models/shared/core/spotify-track';
 import { NowPlayingService } from './services/now-playing';
 import { RabbitMQService } from './services/rabbit-mq';
-
-import { NowPlayingRequest } from './models/shared/now-playing/now-playing-request';
-import { NowPlayingTrackRequest } from './models/shared/now-playing/now-playing-track-request';
+import { QueueManagerService } from './services/queue-manager';
 
 class Server {
     public static readonly REDIS_HOST = 'localhost';
@@ -28,12 +19,11 @@ class Server {
     public app: any;
     private server: any;
     private io: SocketIO.Server;
-    private spotify: SpotifyService;
     private nowPlaying: NowPlayingService;
     private rabbit: RabbitMQService;
+    private queueManager: QueueManagerService;
     private redisHost: string;
     private port: number;
-    private connection: ISubscription;
 
     public static bootstrap(): Server {
         return new Server().bootstrap();
@@ -80,7 +70,9 @@ class Server {
 
     private services(): void {
         this.rabbit = RabbitMQService.bootstrap();
-        this.nowPlaying = NowPlayingService.bootstrap(this.rabbit, this.io);
+        this.queueManager = QueueManagerService.bootstrap();
+        this.nowPlaying = NowPlayingService.bootstrap(this.rabbit, this.io, this.queueManager);
+
     }
 
     private listen(): void {
