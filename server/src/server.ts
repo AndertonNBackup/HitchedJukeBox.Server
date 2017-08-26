@@ -11,6 +11,7 @@ import * as amqp from 'amqplib/callback_api'
 import { NowPlayingService } from './services/now-playing';
 import { RabbitMQService } from './services/rabbit-mq';
 import { QueueManagerService } from './services/queue-manager';
+import { PlayerManagerService } from './services/player-manager';
 
 class Server {
     public static readonly REDIS_HOST = 'localhost';
@@ -22,6 +23,7 @@ class Server {
     private nowPlaying: NowPlayingService;
     private rabbit: RabbitMQService;
     private queueManager: QueueManagerService;
+    private playerManager: PlayerManagerService;
     private redisHost: string;
     private port: number;
 
@@ -72,6 +74,7 @@ class Server {
         this.rabbit = RabbitMQService.bootstrap();
         this.queueManager = QueueManagerService.bootstrap();
         this.nowPlaying = NowPlayingService.bootstrap(this.rabbit, this.io, this.queueManager);
+        this.playerManager = PlayerManagerService.bootstrap(this.rabbit, this.io, this.queueManager);
 
     }
 

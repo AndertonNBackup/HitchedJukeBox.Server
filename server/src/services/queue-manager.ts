@@ -22,7 +22,7 @@ export class QueueManagerService {
     private config(): void {
         console.log('Queue Manager Service Initiated!');
 
-        this.MainQueue = new Array<any>();
+        this.MainQueue = new Array<NowPlayingItem>();
     }
 
     public AddTrack(track: NowPlayingItem): boolean

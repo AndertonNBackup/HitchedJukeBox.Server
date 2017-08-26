@@ -68,17 +68,19 @@ export class NowPlayingService {
     }
 
     private process_track_request(trackRequest: NowPlayingTrackRequest, Credentials: { status: string, name: string }): void {
-        
+
         let spotifyTrack: SpotifyTrack = SpotifyTrack.fromJSON(trackRequest);
 
-        this.queueManager.AddTrack(new NowPlayingItem(
-            NowPlayingItem.NP_TRACK,
-            spotifyTrack.GetID(),
-            spotifyTrack.GetName(),
-            spotifyTrack.GetArtistName(),
-            spotifyTrack.GetImage(),
-            Credentials.name
-        ));
+        this.queueManager.AddTrack(
+            new NowPlayingItem(
+                NowPlayingItem.NP_TRACK,
+                spotifyTrack.GetID(),
+                spotifyTrack.GetName(),
+                spotifyTrack.GetArtistName(),
+                spotifyTrack.GetImage(),
+                Credentials.name
+            )
+        );
 
         let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(
             this.queueManager.FetchQueue()
@@ -124,7 +126,7 @@ export class NowPlayingService {
     }
 
     private process_upvote_request(Credentials: { status: string, name: string }, commandRequest: NowPlayingCommandRequest): void {
-        
+
         this.queueManager.AddVoteToTrack(commandRequest.GetIndex(), Credentials.name);
 
         let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(
@@ -138,9 +140,9 @@ export class NowPlayingService {
     }
 
     private process_downvote_request(Credentials: { status: string, name: string }, commandRequest: NowPlayingCommandRequest): void {
-        
+
         this.queueManager.RemoveVoteFromTrack(commandRequest.GetIndex(), Credentials.name);
-        
+
         let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(
             this.queueManager.FetchQueue()
         );

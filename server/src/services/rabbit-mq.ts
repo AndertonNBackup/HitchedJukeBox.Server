@@ -46,7 +46,9 @@ export class RabbitMQService {
     }
 
     public sendMessage(message: any) {
+
         let serialisedMessage: string = JSON.stringify(message);
+        
         return this.channel.sendToQueue(
             RabbitMQService.RS_BASE + RabbitMQService.RS_VOTER_Q, 
             new Buffer(serialisedMessage)
