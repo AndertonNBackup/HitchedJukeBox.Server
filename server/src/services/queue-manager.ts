@@ -61,6 +61,17 @@ export class QueueManagerService {
         return this.sort_queue();
     }
 
+    public FetchItem(): NowPlayingItem
+    {
+        this.sort_queue();
+        return this.MainQueue.shift();
+    }
+
+    public FetchItemCount(): number
+    {
+        return this.MainQueue.length;
+    }
+
     public ClearQueue(): Array<NowPlayingItem>
     {
         this.MainQueue = new Array<NowPlayingItem>();

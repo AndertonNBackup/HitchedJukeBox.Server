@@ -20,12 +20,12 @@ import { NowPlayingItem } from '../models/shared/now-playing/now-playing-item';
 export class NowPlayingService {
     public static readonly SERVICE_PREFIX: string = "NowPlaying";
 
-    private appPrefix: string = "HJBV";
+    private appPrefix: string = "HJB";
 
     private io: SocketIO.Server;
     private rabbit: RabbitMQService;
     private queueManager: QueueManagerService;
-    private connection: ISubscription;
+    private voterConnection: ISubscription;
 
     public static bootstrap(rabbit: RabbitMQService, io: SocketIO.Server, queueManager: QueueManagerService): NowPlayingService {
         return new NowPlayingService(rabbit, io, queueManager).bootstrap();
@@ -48,7 +48,7 @@ export class NowPlayingService {
     }
 
     private listen() {
-        this.connection = this.rabbit.getMessages().subscribe((nowPlayingRequest): any => {
+        this.voterConnection = this.rabbit.getMessagesObervable(RabbitMQService.RS_VOTER_Q).subscribe((nowPlayingRequest): any => {
 
             nowPlayingRequest = NowPlayingRequest.FromObject(JSON.parse(nowPlayingRequest));
 
