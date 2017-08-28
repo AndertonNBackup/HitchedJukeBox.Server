@@ -73,10 +73,10 @@ export class PlayerManagerService {
                     nowPlayingResponse
                 );
             } else {
-                // this.rabbit.sendMessage(
-                //     RabbitMQService.RS_PLAYLIST_Q, 
-                //     new NowPlayingItem(-1, "", "", "", "", "")
-                // );
+                this.rabbit.sendMessage(
+                    RabbitMQService.RS_PLAYLIST_Q, 
+                    new NowPlayingItem(-1, "", "", "", "", "")
+                );
             }
             
         });
