@@ -77,17 +77,15 @@ export class PlayerManagerService {
             console.log("Refresh Token : " + this.RefreshToken);
 
             if(this.queueManager.FetchItemCount() > 0 ) {
-                console.log("Sending Play Command!");
+
                 let nowPlayingItem = this.queueManager.FetchItem();
                 let uri: string = "spotify:track:" + nowPlayingItem.getId();
-                console.log("Uri:");
-                console.log(uri);
+
                 this.sendGeneric('https://api.spotify.com/v1/me/player/play', {
                     "uris": [
                         uri
                     ]
                 }).then(response => {
-                    console.log(response);
                     let nowPlayingResponse: NowPlayingResponse = new NowPlayingResponse(
                         this.queueManager.FetchQueue()
                     );
