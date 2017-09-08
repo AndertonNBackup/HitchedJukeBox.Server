@@ -82,6 +82,14 @@ export class PlayerManagerService {
         });
     }
 
+    // private sendGeneric(url: string, body: any, method: string = 'put'): Promise<any> {
+    //     return fetch(url, {
+    //         method: method,
+    //         headers: { Authorization: 'Bearer ' + this.accessToken },
+    //         body: JSON.stringify(body)
+    //     });
+    // }
+
     private logQueue(): void {
 
         console.log("Player Queue Display : ");
